@@ -1,0 +1,196 @@
+﻿@inject TaskService _taskService
+@inject UserService _userService
+@inject TaskEditState _editService
+
+@if (EditCard != null)
+{
+    <AuthorizeView Roles="SuperAdmin, Admin">
+        <Authorized Context="EditTask">
+            <EditForm Model="EditCard" OnValidSubmit="SaveChanges">
+                <AlertMessage MessageType="@messageType" Message="@message" />
+                <div class="form-group">
+                    <label for="Name">Задача</label>
+                    <input class="form-control" type="text" @bind-value="EditCard.Name" placeholder="Введите задание" />
+                </div>
+
+                <div class="form-group">
+                    <label for="Name">Описание</label>
+                    <textarea class="form-control" type="text" @bind="EditCard.Description" placeholder="Опишите задание подробнее" />
+                </div>
+
+                <div class="form-group">
+                    <label for="Deadline">Срок</label>
+                    <div name="Deadline" class="row col-md-12">
+                        <input class="form-control col-md-4" type="number" @bind-value="EditCard.DeadlineDays" placeholder="Введите количество дней на решение" />
+                        <RadzenDatePicker TValue="DateTime"
+                                          Value="@(EditCard.CreateDate.AddDays(EditCard.DeadlineDays))"
+                                          Change="@(date => SelectDate(date))"
+                                          DateFormat="dd.MM.yyyy" />
+
+                        @if (colors != null)
+                        {
+                            <div class="form-group col-md-2">
+                                <select @bind="EditCard.Color.Id" class="form-control" style="background-color: @colors.Single(s => s.Id == EditCard.Color.Id).Name">
+                                    @foreach (var color in colors)
+                                    {
+                                        <option value="@color.Id" style="background-color: @color.Name" @onselect="@(() => SelectColor(color))">@color.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ResponsibleUsers">Ответственные на текущий момент:</label>
+                    @if (bindUsers != null && bindUsers.Any())
+                    {
+                        <ul style="height: 80px; overflow: auto; border: groove;">
+                            @foreach (var user in bindUsers)
+                            {
+                                <li>@user</li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <span>Отсутствуют</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label for="ResponsibleUsers">Ответственные</label>
+                    @if (Users != null && bindUsers != null)
+                    {
+                        <RadzenDropDownDataGrid class="form-control"
+                                                AllowFiltering="true"
+                                                AllowClear="true" @bind-Value="EditCard.Users"
+                                                Multiple="true" Placeholder="Выберите ответсвенных"
+                                                Data="@Users" TextProperty="FullName" ValueProperty="UserId" />
+                    }
+                </div>
+                <a class="btn btn-danger" @onclick="() => Delete(EditCard)" style="margin-bottom: 20px; float: right; padding: 5px;">Удалить</a>
+                <input class="btn btn-success" type="submit" style="margin-bottom: 20px; float: right; padding: 5px;" value="Сохранить" />
+            </EditForm>
+        </Authorized>
+        <NotAuthorized Context="EditTask">
+            <div class="form-group">
+                <label for="Name">Задача</label>
+                <span class="form-control" type="text">@EditCard.Name</span>
+            </div>
+
+            <div class="form-group">
+                <label for="Name">Описание</label>
+                @if (String.IsNullOrEmpty(EditCard.Description))
+                {
+                    <span class="form-control">Описание не добавлено</span>
+                }
+                else
+                {
+                    <span disabled class="form-control">@EditCard.Description</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="Deadline">Срок</label>
+                <div name="Deadline" class="row col-md-12">
+                    <span disabled class="form-control col-md-4">@EditCard.DeadlineDays</span>
+                    <span disabled class="form-control col-md-4">@(String.Format("{0:dd.MM.yyyy}", EditCard.CreateDate.AddDays(EditCard.DeadlineDays)))</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="ResponsibleUsers">Ответственные:</label>
+                @if (bindUsers != null && bindUsers.Any())
+                {
+                    <ul style="height: 50px; overflow: auto;">
+                        @foreach (var user in bindUsers)
+                        {
+                            <li>@user</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <span>Отсутствуют</span>
+                }
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+}
+
+@code {
+    [Parameter] public CardDTO EditCard { get; set; }
+    [Parameter] public IEnumerable<UserDTO> Users { get; set; }
+
+    IEnumerable<string> bindUsers;
+    string message = String.Empty;
+    IEnumerable<TaskColorDTO> colors;
+    AlertMessageType messageType = AlertMessageType.Success;
+
+    protected override void OnParametersSet()
+    {
+        message = String.Empty;
+        if (EditCard != null && EditCard.Users == null)
+        {
+            EditCard.Users = new List<string>();
+        }
+        BindUsers();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        colors = await _taskService.GetColors();
+    }
+
+    async Task SaveChanges()
+    {
+        message = String.Empty;
+        var result = await _taskService.PutAsync(EditCard);
+        if (result == ResponseResultEnum.Updated)
+        {
+            message = "Сохранено";
+            messageType = AlertMessageType.Success;
+            BindUsers();
+        }
+        else
+        {
+            message = "Не удалось сохранить изменения";
+            messageType = AlertMessageType.Error;
+        }
+    }
+
+    void BindUsers()
+    {
+        if (Users != null && EditCard != null)
+        {
+            bindUsers = Users.Where(x => EditCard.Users.Contains(x.UserId)).Select(s => s.FullName);
+        }
+    }
+
+    void SelectDate(DateTime? date)
+    {
+        EditCard.DeadlineDays = date.Value.Subtract(EditCard.CreateDate).Days;
+    }
+
+    void SelectColor(TaskColorDTO color)
+    {
+        EditCard.Color = color;
+    }
+
+    async Task Delete(CardDTO card)
+    {
+        _editService.Delete(card);
+        var result = await _taskService.DeleteTaskAsync(card.Id);
+        if (result == ResponseResultEnum.Deleted)
+        {
+            message = "Задача удалена";
+            messageType = AlertMessageType.Success;
+        }
+        else
+        {
+            message = "Ошибка при удалении задачи";
+            messageType = AlertMessageType.Error;
+        }
+    }
+}

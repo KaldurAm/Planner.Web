@@ -1,0 +1,52 @@
+﻿@page "/auth/register"
+@layout AuthLayout
+@inject AuthService _authService
+@inject NavigationManager _navigationManager
+@inject ILocalStorageService _storageService
+@inject AuthenticationStateProvider _authenticationProvider
+
+<div class="middle-box" id="formContent">
+    <div class="close-auth">
+        <a class="close" @onclick="Close">x</a>
+    </div>
+    <AlertMessage Message="@message" MessageType="@messageType" />
+    <EditForm Model="model" OnValidSubmit="RegisterUser" class="auth-form">
+        <DataAnnotationsValidator />
+        <input autocomplete="off" type="text" id="login" class="fadeIn first" name="Email" placeholder="Email" @bind-value="model.Email">
+        <input autocomplete="off" type="text" id="Name" class="fadeIn second" name="Name" placeholder="Имя" @bind-value="model.Name">
+        <input autocomplete="off" type="text" id="Surname" class="fadeIn third" name="Surname" placeholder="Фамилия" @bind-value="model.Surname">
+        <input autocomplete="off" type="password" id="Password" class="fadeIn fourth" name="Password" placeholder="Пароль" @bind-value="model.Password">
+        <input autocomplete="off" type="password" id="ConfirmPassword" class="fadeIn fourth" name="ConfirmPassword" placeholder="Подтвердите пароль" @bind-value="model.ConfirmPassword">
+        <input type="submit" class="fadeIn" value="Регистрация" disabled="@isBusy" @onclick="RegisterUser">
+    </EditForm>
+</div>
+
+@code {
+    RegisterRequest model = new RegisterRequest();
+
+    bool isBusy = false;
+    string message = string.Empty;
+    AlertMessageType messageType = AlertMessageType.Success;
+    public async Task RegisterUser()
+    {
+        isBusy = true;
+        var result = await _authService.RegisterUserAsync(model);
+        if (result.Success)
+        {
+            await _storageService.SetItemAsync("Token", result.Token);
+            await _authenticationProvider.GetAuthenticationStateAsync();
+            _navigationManager.NavigateTo("/");
+        }
+        else
+        {
+            message = result.Errors != null ? String.Join(",", result.Errors) : result.Message;
+            messageType = AlertMessageType.Error;
+        }
+        isBusy = false;
+    }
+
+    private void Close()
+    {
+        _navigationManager.NavigateTo("/");
+    }
+}

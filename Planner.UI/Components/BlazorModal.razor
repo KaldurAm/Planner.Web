@@ -1,0 +1,30 @@
+﻿@inject TaskEditState _editState
+
+<div class="popup @showStateClass">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h5 class="popup-title">@Title</h5>
+            <button type="button" class="close popup-close-button" aria-label="Close" @onclick="ClosePopup">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="popup-body">@PopupBody</div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; }
+    [Parameter]
+    public RenderFragment PopupBody { get; set; }
+    [Parameter]
+    public bool IsOpened { get; set; }
+
+    string showStateClass => IsOpened ? "show" : "hide";
+
+    private void ClosePopup()
+    {
+        PopupBody = null;
+        _editState.Close();
+    }
+}

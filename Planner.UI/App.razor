@@ -1,0 +1,15 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Planner.UI.Shared
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+    <NotFound>
+        <CascadingAuthenticationState>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <NotFoundPage />
+            </LayoutView>
+        </CascadingAuthenticationState>
+    </NotFound>
+</Router>

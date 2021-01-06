@@ -1,0 +1,59 @@
+﻿@page "/auth/login"
+@layout AuthLayout
+@inject AuthService _authService
+@inject NavigationManager _navigationManager
+@inject ILocalStorageService _storageService
+@inject AuthenticationStateProvider _authenticationProvider
+
+<div class="wrapper fadeInDown">
+    <div class="middle-box" id="formContent">
+        <div class="close-auth">
+            <a class="close" @onclick="Close">x</a>
+        </div>
+        <AlertMessage Message="@message" MessageType="@messageType" />
+        <EditForm Model="model" OnValidSubmit="LoginUser" class="auth-form">
+            <DataAnnotationsValidator />
+            <input autocomplete="off" type="text" id="login" class="fadeIn first" name="login" placeholder="Email" @bind-value="model.Email">
+            <ValidationMessage For="@(() => model.Email)" />
+            <input autocomplete="off" type="password" id="password" class="fadeIn second" name="login" placeholder="Пароль" @bind-value="model.Password">
+            <ValidationMessage For="@(() => model.Password)" />
+            <input type="submit" class="fadeIn" value="Войти" disabled="@isBusy" @onclick="LoginUser">
+            <input type="button" class="fadeIn" value="Регистрация" disabled="@isBusy" @onclick="GoToRegister">
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    LoginRequest model = new LoginRequest();
+    bool isBusy = false;
+    string message = string.Empty;
+    AlertMessageType messageType = AlertMessageType.Success;
+
+    private async Task LoginUser()
+    {
+        isBusy = true;
+        var result = await _authService.LoginUserAsync(model);
+        if (result.Success)
+        {
+            await _storageService.SetItemAsync("Token", result.Token);
+            await _authenticationProvider.GetAuthenticationStateAsync();
+            _navigationManager.NavigateTo("/");
+        }
+        else
+        {
+            message = result.Errors != null ? String.Join(",", result.Errors) : result.Message;
+            messageType = AlertMessageType.Error;
+        }
+        isBusy = false;
+    }
+
+    private void GoToRegister()
+    {
+        _navigationManager.NavigateTo("/auth/register");
+    }
+
+    private void Close()
+    {
+        _navigationManager.NavigateTo("/");
+    }
+}

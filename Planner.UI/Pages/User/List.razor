@@ -1,0 +1,28 @@
+﻿@page "/user/list"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Chief")]
+@inject UserService _userService
+
+<h1>Список пользователей</h1>
+
+<table class="table">
+    @foreach (var user in users)
+    {
+        <tr>
+            <td>
+                @user.Email
+            </td>
+            <td>
+                <a class="btn btn-sm btn-primary" href="/user/edit/@user.Id">Права доступа</a>
+            </td>
+        </tr>
+    }
+</table>
+
+@code {
+    IEnumerable<ApplicationUserDTO> users = new List<ApplicationUserDTO>();
+
+    protected async override Task OnInitializedAsync()
+    {
+        users = await _userService.GetUsers();
+    }
+}

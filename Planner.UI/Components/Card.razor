@@ -1,0 +1,21 @@
+﻿@inject TaskEditState _editState
+
+<li class="draggable" draggable="true" title="@TaskModel.Name" @ondragstart="@(() => HandleDragStart(TaskModel))" @onclick="() => Open(TaskModel)">
+    <span style=" float: right; font-size: 12px; font-weight: 700; height: 100%; line-height: 100px; margin: 0 4px 4px 0; max-width: 40px; min-width: 40px; padding: 0; text-shadow: none; width: auto; background-color: @((ColorEnum)TaskModel.Color.Id);"></span>
+    @TaskModel.Name
+</li>
+
+@code {
+    [CascadingParameter] TaskContainer Container { get; set; }
+    [Parameter] public CardDTO TaskModel { get; set; }
+
+    private void HandleDragStart(CardDTO selectedTask)
+    {
+        Container.Payload = selectedTask;
+    }
+
+    void Open(CardDTO selectedTask)
+    {
+        _editState.Open(selectedTask, Container.Users);
+    }
+}

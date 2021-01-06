@@ -1,0 +1,56 @@
+﻿@page "/user/edit/{userId}"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Chief")]
+@inject UserService _userService
+@inject NavigationManager _nav
+
+<AlertMessage Message="@message" MessageType="@messageType" />
+@if (user != null)
+{
+    <h1>Редактирование ролей @user.Email</h1>
+    @if (roles != null)
+    {
+        <EditForm Model="user" OnValidSubmit="Save">
+            <RadzenCheckBoxList @bind-Value="user.Roles" TValue="string" Orientation="Radzen.Orientation.Vertical">
+                <Items>
+                    @foreach (var role in roles)
+                    {
+                        <RadzenCheckBoxListItem Text="@role.Name" Value="@role.Name"  />
+                    }
+                </Items>
+            </RadzenCheckBoxList>
+            <div class="btn-group">
+                <input type="submit" value="Сохранить" />
+            </div>
+        </EditForm>
+    }
+}
+
+@code {
+    [Parameter]
+    public string UserId { get; set; }
+
+    ApplicationUserDTO user = null;
+    IEnumerable<RoleDTO> roles = null;
+    string message = String.Empty;
+    AlertMessageType messageType = AlertMessageType.Success;
+
+    protected async override Task OnInitializedAsync()
+    {
+        user = await _userService.GetUser(UserId);
+        roles = await _userService.GetRoles();
+    }
+
+    private async Task Save()
+    {
+        var result = await _userService.UpdateRoles(user);
+        if (result == ResponseResultEnum.Updated)
+        {
+            _nav.NavigateTo("/user/list");
+        }
+        else
+        {
+            message = "Не удалось сохранить запись.";
+            messageType = AlertMessageType.Error;
+        }
+    }
+}

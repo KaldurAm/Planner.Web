@@ -1,0 +1,89 @@
+﻿@page "/kanban/{objectId}"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Chief, Employee, Partner")]
+@inject TaskService _taskService
+@inject UserService _userService
+@inject TaskEditState _editState
+@inject BuildingObjectService _objectService
+@implements IDisposable
+
+<link href="css/kanban.css" rel="stylesheet" />
+
+<div class="container-fluid" style="overflow: auto;">
+    <AlertMessage Message="@message" MessageType="@messageType" />
+
+    @if (ObjectSelection != null)
+    {
+        <RadzenDropDown AllowClear="true"
+                        Data=@ObjectSelection
+                        TextProperty="Name"
+                        TValue="int"
+                        ValueProperty="Id"
+                        @bind-Value="RealtyObjectId"
+                        Placeholder="Выберите объект"
+                        Change="ChangeObject"
+                        Disabled="@isBusy" />
+    }
+
+    @if (objectSelected)
+    {
+        if (_editState.Tasks != null)
+        {
+            <TaskContainer Tasks="@_editState.Tasks" OnStatusUpdated="HandleStatusUpdated" ObjectId="@ObjectId">
+                @foreach (var status in _editState.StatusList)
+                {
+                    <TaskStatus ListStatus="@status" AllowedStatuses="@_editState.StatusList" />
+                }
+            </TaskContainer>
+
+            <BlazorModal IsOpened="@_editState.IsOpen" Title="Информация по задаче">
+                <PopupBody>
+                    <EditTask EditCard="@_editState.Task" Users="@_editState.Users" />
+                </PopupBody>
+            </BlazorModal>
+        }
+    }
+</div>
+@code {
+    [Parameter]
+    public string ObjectId { get; set; }
+
+    string message = String.Empty;
+    AlertMessageType messageType = AlertMessageType.Warning;
+    private int RealtyObjectId;
+    private bool objectSelected = false;
+    private IEnumerable<ObjectSelection> ObjectSelection;
+    bool isBusy = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ObjectSelection = await _objectService.GetObjectsForSelect();
+        objectSelected = ObjectId != "0";
+        _editState.SetStatuses((await _taskService.GetTaskStatusList()).ToList());
+        if (objectSelected)
+        {
+            RealtyObjectId = Convert.ToInt32(ObjectId);
+            _editState.SetCards((await _taskService.GetTasksByObjectId(RealtyObjectId)).ToList());
+        }
+        _editState.OnChange += StateHasChanged;
+    }
+
+    void HandleStatusUpdated(CardDTO updatedCard)
+    {
+        Console.WriteLine(updatedCard.Name);
+    }
+
+    async Task ChangeObject()
+    {
+        isBusy = true;
+        ObjectId = RealtyObjectId.ToString();
+        var tasks = await _taskService.GetTasksByObjectId(RealtyObjectId);
+        _editState.SetCards(tasks.ToList());
+        objectSelected = true;
+        isBusy = false;
+    }
+
+    public void Dispose()
+    {
+        _editState.OnChange -= StateHasChanged;
+    }
+}

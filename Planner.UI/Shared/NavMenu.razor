@@ -1,0 +1,46 @@
+﻿<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href=""><img src="img/logo.png" alt="Alternate Text" style="height: 30px;" /></a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column">
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                <span class="oi oi-map" aria-hidden="true"></span> Главная
+            </NavLink>
+        </li>
+        <AuthorizeView Roles="SuperAdmin, Admin, Chief">
+            <Authorized>
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="/object/list">
+                        <span class="oi oi-home" aria-hidden="true"></span> Объекты
+                    </NavLink>
+                </li>
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="/user/list">
+                        <span class="oi oi-person" aria-hidden="true"></span> Пользователи
+                    </NavLink>
+                </li>
+            </Authorized>
+        </AuthorizeView>
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="/kanban/0">
+                <span class="oi oi-task"></span> Задачи
+            </NavLink>
+        </li>
+    </ul>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

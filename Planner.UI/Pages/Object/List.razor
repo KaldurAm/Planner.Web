@@ -1,0 +1,54 @@
+﻿@page "/object/list"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Chief, Partner, Employee")]
+@inject BuildingObjectService _objectService
+@inject NavigationManager _nav
+
+<CreateBuildingObjectButton />
+
+<RadzenDataList WrapItems="true" AllowPaging="true" Data="@buildingObjects" TItem="DisplayObjectDTO">
+    <Template Context="build">
+        <RadzenCard Style="width:500px;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div>Название:</div>
+                    <b>@build.Name</b>
+                    <div style="margin-top:20px">Дата начала строительства:</div>
+                    <b>@build.StartDate.ToString("dd.MM.yyyy")</b>
+                    <br />
+                    <div style="margin-top:20px">Дата реализации:</div>
+                    <b>@build.ReleaseDate.ToString("dd.MM.yyyy")</b>
+                    <br />
+                    <RadzenImage Path="@build.Image" Style="width:100px;" />
+                </div>
+                <div class="col-md-6">
+                    <div>Страна:</div>
+                    <b>@build.District.City.Region.Country.Name</b>
+
+                    <div>Регион:</div>
+                    <b>@build.District.City.Region.Name</b>
+
+                    <div>Город:</div>
+                    <b>@build.District.City.Name</b>
+
+                    <div>Район:</div>
+                    <b>@build.District.Name</b>
+
+                    <div>Адрес:</div>
+                    <b>@build.Address</b>
+                </div>
+                <div class="btn-group" style="margin-left: 15px;">
+                    <a class="btn btn-info float-right" href="/object/detail/@build.Id.ToString()">Подробнее</a>
+                </div>
+            </div>
+        </RadzenCard>
+    </Template>
+</RadzenDataList>
+
+@code {
+    IEnumerable<DisplayObjectDTO> buildingObjects = new List<DisplayObjectDTO>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        buildingObjects = await _objectService.GetAll();
+    }
+}

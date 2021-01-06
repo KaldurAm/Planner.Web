@@ -1,0 +1,35 @@
+﻿@inject TaskService _taskService
+@inject UserService _userService
+
+<div class="lists-container">
+    <CascadingValue Value="this">
+        @ChildContent
+    </CascadingValue>
+</div>
+
+@code {
+    [Parameter] public List<CardDTO> Tasks { get; set; }
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public EventCallback<CardDTO> OnStatusUpdated { get; set; }
+    [Parameter] public string ObjectId { get; set; }
+
+    public CardDTO Payload { get; set; }
+    public IEnumerable<UserDTO> Users { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Users = await _userService.GetUsersInfo();
+    }
+
+    public async Task UpdateTaskAsync(StatusDTO newStatus)
+    {
+        var task = Tasks.SingleOrDefault(x => x.Id == Payload.Id);
+
+        if (task != null)
+        {
+            task.Status = newStatus;
+            _taskService.UpdateStatusAsync(Payload);
+            await OnStatusUpdated.InvokeAsync(Payload);
+        }
+    }
+}

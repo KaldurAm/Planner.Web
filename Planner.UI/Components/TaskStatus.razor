@@ -1,0 +1,106 @@
+﻿@inject TaskService _taskService
+
+<div class="list">
+    <h3 class="list-title">@ListStatus.Name (@Tasks.Count())</h3>
+
+    <ul class="list-items dropzone @dropClass"
+        ondragover="event.preventDefault();"
+        ondragstart="event.dataTransfer.setData('', event.target.id);"
+        @ondrop="HandleDrop"
+        @ondragenter="HandleDragEnter"
+        @ondragleave="HandleDragLeave">
+
+        @foreach (var task in Tasks)
+        {
+            <Card TaskModel="@task" />
+        }
+
+        @if (createMode)
+        {
+            <li>
+                <EditForm Model="createCard" OnValidSubmit="CreateTask">
+                    <textarea class="form-control" style="font-size: 1.4rem; font-weight: 400;" type="text" placeholder="Введите название задачи" @bind="createCard.Name" />
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-success" style="padding: 5px;">Добавить задачу</button>
+                        <button type="button" class="close popup-close-button" aria-label="Close" @onclick="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                </EditForm>
+            </li>
+        }
+    </ul>
+
+    @if (!createMode)
+    {
+        <a @onclick="(() => createMode = true)" class="add-card-btn btn">Добавить</a>
+    }
+</div>
+
+@code {
+    [CascadingParameter] TaskContainer Container { get; set; }
+    [Parameter] public StatusDTO ListStatus { get; set; }
+    [Parameter] public List<StatusDTO> AllowedStatuses { get; set; }
+
+    CreateCardDTO createCard = new CreateCardDTO();
+    List<CardDTO> Tasks = new List<CardDTO>();
+    string dropClass = String.Empty;
+
+    bool createMode = false;
+
+    protected override void OnParametersSet()
+    {
+        Tasks.Clear();
+        Tasks.AddRange(Container.Tasks.Where(x => x.Status.Id == ListStatus.Id));
+    }
+
+    private void HandleDragEnter()
+    {
+        if (ListStatus.Id == Container.Payload.Status.Id) return;
+
+        if (AllowedStatuses != null && !AllowedStatuses.Select(s => s.Id).Contains(Container.Payload.Status.Id))
+        {
+            dropClass = "no-drop";
+        }
+        else
+        {
+            dropClass = "can-drop";
+        }
+    }
+
+    private void HandleDragLeave()
+    {
+        dropClass = "";
+    }
+
+    private void HandleDrop()
+    {
+        dropClass = "";
+
+        if (AllowedStatuses != null && !AllowedStatuses.Select(s => s.Id).Contains(Container.Payload.Status.Id)) return;
+
+        Container.UpdateTaskAsync(ListStatus);
+    }
+
+    async Task CreateTask()
+    {
+        if (!String.IsNullOrEmpty(createCard.Name))
+        {
+            createCard.ObjectId = Convert.ToInt32(Container.ObjectId);
+            createCard.StatusId = ListStatus.Id;
+            var result = await _taskService.PostAsync(createCard);
+            if (result.Result == ResponseResultEnum.Created)
+            {
+                Tasks.Add(result.Response);
+                createMode = false;
+                createCard = new CreateCardDTO();
+            }
+        }
+    }
+
+    void Close()
+    {
+        createMode = false;
+        createCard = new CreateCardDTO();
+    }
+}

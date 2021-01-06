@@ -1,0 +1,143 @@
+﻿@page "/object/detail/{objectId}"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Chief, Partner, Employee")]
+@inject BuildingObjectService _objectService
+@inject NavigationManager _nav
+
+<h1>
+    Информация по объекту
+    @if (building?.Deleted == true)
+    {
+        <span class="badge badge-danger">удален</span>
+    }
+</h1>
+<AlertMessage Message="@message" MessageType="@messageType" />
+<div class="row">
+    <div class="col-md-6">
+        <RadzenCard Style="width: auto; height: auto;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div>Название:</div>
+                    <b>@building?.Name - @building?.Code</b>
+                    <div style="margin-top:20px">Период:</div>
+                    <b>@building?.StartDate.ToString("dd.MM.yyyy") - @building?.ReleaseDate.ToString("dd.MM.yyyy")</b>
+                    <br />
+                    <div style="margin-top:20px">Кадастровый номер:</div>
+                    <b>@building?.CadastralNumber</b>
+                    <br />
+                    <div style="margin-top:20px">Площадь:</div>
+                    <b>@building?.Area @building?.Property.Name</b>
+                    <br />
+                    <div style="margin-top:20px">Стоимость:</div>
+                    <b>@building?.Cost @building?.Currency.Name</b>
+                    <br />
+                    <div style="margin-top:20px">Описание:</div>
+                    <b>@building?.Description</b>
+                    <br />
+                    <div style="margin-top:20px">Адрес:</div>
+                    <b>@building?.District.City.Region.Country.Name, @building?.District.City.Name, @building?.District.Name, @building?.Address</b>
+                    <br />
+                    <div style="margin-top:20px">Текущий статус:</div>
+                    <b>@building?.Status.Name</b>
+                </div>
+                <div class="col-md-6">
+                    <span style="margin-top:20px;margin-right:3px;">Количество задач:</span>
+                    <b>@(building?.ShortTaskInfo?.Count() ?? 0)</b>
+                    <br />
+                    <span style="margin-top:20px;margin-right:3px;">Количество документов:</span>
+                    <b>@(building?.Files?.Count() ?? 0)</b>
+                    <br />
+                    <span style="margin-top:20px;margin-right:3px;">Количество партнеров:</span>
+                    <b>@(building?.PartnerList?.Count() ?? 0)</b>
+                </div>
+            </div>
+        </RadzenCard>
+    </div>
+    <div class="col-md-6">
+        <RadzenGoogleMap ApiKey="AIzaSyAQGepjcajymP5Wm0iY1cyJTJBVVx5_fZ8" Zoom="14" Center="@(mapCenter)">
+            <Markers>
+                <RadzenGoogleMapMarker Title="@building?.Name"
+                                       Label="@building?.Name"
+                                       Position="@(new Radzen.GoogleMapPosition() { Lat = building?.Lat ?? 0, Lng = building?.Lng ?? 0 })" />
+            </Markers>
+        </RadzenGoogleMap>
+    </div>
+    @if (building?.Deleted == false)
+    {
+        <div style="margin-top: 10px; margin-left: 15px;">
+            <a class="btn btn-warning" href="/object/edit/@building?.Id.ToString()">Редактировать</a>
+            <a class="btn btn-info" href="/kanban/@building?.Id.ToString()">Перейти к списку задач</a>
+            <a class="btn btn-danger" style="cursor: pointer;" @onclick="OpenModal">Удалить</a>
+        </div>
+    }
+</div>
+
+<!-- The Modal -->
+<div class="modal @modalState" id="DeleteConfirm" style="background-color: rgba(0,0,0,0.8)">
+    <div class="modal-dialog" style="margin-top: 10%;">
+        <div class="modal-content">
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">Объект @building?.Name</h4>
+                <button type="button" class="close" @onclick="CloseModal">&times;</button>
+            </div>
+
+            <!-- Modal body -->
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <p>Вы действительно хотите удалить объект?</p>
+                </div>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <a style="cursor:pointer;" class="btn btn-danger" @onclick="Delete">Удалить</a>
+                <a style="cursor:pointer;" class="btn btn-secondary" @onclick="CloseModal">Отменить</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string ObjectId { get; set; }
+
+    string modalState = "fade";
+    string message = String.Empty;
+    AlertMessageType messageType = AlertMessageType.Error;
+    ObjectDetailDTO building;
+    Radzen.GoogleMapPosition mapCenter = new Radzen.GoogleMapPosition();
+    protected override async Task OnInitializedAsync()
+    {
+        building = await _objectService.GetById(Convert.ToInt32(ObjectId));
+        if (building != null)
+        {
+            mapCenter.Lat = building.Lat == 0 ? 43.2360153198242 : building.Lat;
+            mapCenter.Lng = building.Lng == 0 ? 76.935432434082f : building.Lng;
+        }
+    }
+
+    void OpenModal()
+    {
+        modalState = "show";
+    }
+
+    void CloseModal()
+    {
+        modalState = "fade";
+    }
+
+    async Task Delete()
+    {
+        var response = await _objectService.DeleteAsync(building.Id);
+        if (response == ResponseResultEnum.Deleted)
+        {
+            _nav.NavigateTo("/object/list");
+        }
+        else
+        {
+            message = "Ошибка при удалении объекта";
+        }
+    }
+}

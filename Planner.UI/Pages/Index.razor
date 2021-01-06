@@ -1,0 +1,61 @@
+﻿@page "/"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Chief, Partner, Employee")]
+@inject DistrictService _districtService
+@inject ILocalStorageService _localStorage
+@inject NavigationManager _nav
+<h1>Список объектов</h1>
+<div class="row">
+    <div class="col-md-4" name="objectsSide" style="overflow: auto;">
+        <ul class="list-group">
+            @foreach (var district in districtsWithObjects)
+            {
+                <li class="list-group-item">
+                    <a style="cursor: pointer" @onclick="@(() => ChangeCollapseState(district))">@district.Name</a>
+                    <div class="collapse @(district.IsOpen ? "show" : "")">
+                        <ul>
+                            @foreach (var building in district.Objects.Where(x => !x.Deleted))
+                            {
+                                <li><a style="cursor: pointer" href="/object/detail/@building.Id.ToString()">@building.Name</a></li>
+                            }
+                        </ul>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+    <div class="col-md-8" name="mapSide" style="height: 800px;">
+        <RadzenGoogleMap ApiKey="AIzaSyAQGepjcajymP5Wm0iY1cyJTJBVVx5_fZ8" Zoom="14" Center="@(new Radzen.GoogleMapPosition() { Lat = 43.2392567, Lng = 76.9200893 })" MarkerClick="@OnMarkerClick">
+            <Markers>
+                @foreach (var district in districtsWithObjects)
+                {
+                    @foreach (var building in district.Objects.Where(x => !x.Deleted))
+                    {
+                        <RadzenGoogleMapMarker Title="@building.Id.ToString()"
+                                               Label="@building.Name"
+                                               Position="@(new Radzen.GoogleMapPosition() { Lat = building.Lat, Lng = building.Lng })" />
+                    }
+                }
+            </Markers>
+        </RadzenGoogleMap>
+    </div>
+</div>
+
+@code{
+    IEnumerable<DistrictWithObjectsTree> districtsWithObjects = new List<DistrictWithObjectsTree>();
+    bool isOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        districtsWithObjects = await _districtService.GetDistrictTree();
+    }
+
+    private void ChangeCollapseState(DistrictWithObjectsTree district)
+    {
+        district.IsOpen = !district.IsOpen;
+    }
+
+    private void OnMarkerClick(RadzenGoogleMapMarker marker)
+    {
+        _nav.NavigateTo("/object/detail/" + marker.Title);
+    }
+}

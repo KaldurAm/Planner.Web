@@ -1,0 +1,183 @@
+﻿@page "/object/edit/{realtyObjectId}"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Chief")]
+@inject BuildingObjectService _objectService
+@inject DistrictService _districtService
+@inject CurrencyService _currencyService
+@inject PropertyService _propertyService
+@inject NavigationManager _nav
+
+<AlertMessage Message="@message" MessageType="@messageType" />
+@if (build == null)
+{
+    <Loader />
+}
+else
+{
+    <EditForm Model="build" OnValidSubmit="SaveChanges">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="Code">Код</label>
+                    <input autocomplete="off" class="form-control" name="Code" type="text" @bind-value="build.Code" placeholder="Введите код объекта" />
+                </div>
+
+                <div class="form-group">
+                    <label for="Name">Наименование</label>
+                    <input autocomplete="off" class="form-control" name="Name" type="text" @bind-value="build.Name" placeholder="Введите название объекта" />
+                </div>
+
+                <div class="form-group">
+                    <label for="Description">Описание</label>
+                    <textarea class="form-control" name="Description" type="text" @bind="build.Description" placeholder="Введите описание объекта" />
+                </div>
+
+                <div class="form-group">
+                    <label for="District">Район</label>
+                    <RadzenDropDown class="form-control"
+                                    Name="District"
+                                    Data="@districts"
+                                    TextProperty="Name"
+                                    TValue="int"
+                                    ValueProperty="Id"
+                                    @bind-Value="build.DistrictId"
+                                    Placeholder="Выберите район" />
+                </div>
+
+                <div class="form-group">
+                    <label for="Address">Адрес</label>
+                    <input autocomplete="off" class="form-control" name="Address" type="text" @bind-value="build.Address" placeholder="Введите адрес объекта" />
+                </div>
+
+                <div class="form-group">
+                    <label for="CadastralNumber">Кадастровый номер</label>
+                    <input autocomplete="off" class="form-control" name="CadastralNumber" type="text" @bind-value="@build.CadastralNumber" placeholder="Введите кадастровый номер (необязательно)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="Area">Площадь объекта</label>
+                    <div class="input-group">
+                        <input class="form-control" name="Area" type="number" @bind-value="build.Area" placeholder="Введите площадь объекта" />
+                        <RadzenDropDown class="form-control"
+                                        Name="AreaProperty"
+                                        Data="@areaProperties"
+                                        TextProperty="Name"
+                                        TValue="int"
+                                        ValueProperty="Id"
+                                        @bind-Value="build.PropertyId"
+                                        Placeholder="Выберите свойство" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="Cost">Стоимость объекта</label>
+                    <div class="input-group">
+                        <input autocomplete="off" class="form-control" name="Cost" type="text" @bind-value="build.Cost" placeholder="Введите стоимость объекта" />
+                        <RadzenDropDown class="form-control"
+                                        Name="Currency"
+                                        Data="@currencies"
+                                        TextProperty="Name"
+                                        TValue="int"
+                                        ValueProperty="Id"
+                                        @bind-Value="build.CurrencyId"
+                                        Placeholder="Выберите валюту" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="StartDate">Дата начала строительства</label>
+                    <RadzenDatePicker Placeholder="Выберите дату"
+                                      Name="StartDate"
+                                      TValue="DateTime"
+                                      Value="@build.StartDate"
+                                      Change="@(date => SelectDate(date, DateTimeType.Start))"
+                                      DateFormat="dd.MM.yyyy" />
+                </div>
+
+                <div class="form-group">
+                    <label for="ReleaseDate">Дата реализации</label>
+                    <RadzenDatePicker Placeholder="Выберите дату"
+                                      Name="ReleaseDate"
+                                      TValue="DateTime"
+                                      Value="@build.ReleaseDate"
+                                      Change="@(date => SelectDate(date, DateTimeType.Release))"
+                                      DateFormat="dd.MM.yyyy" />
+                </div>
+
+                <div class="form-group">
+                    <label for="UploadImage">Загрузить документы</label>
+                    <RadzenUpload name="Upload" @ref="upload" Auto="false" Multiple="true" Url="upload/multiple" />
+                </div>
+
+                <div class="form-group">
+                    <input type="submit" value="Сохранить" class="btn btn-success" disabled="@isBusy" />
+                    <a class="btn btn-secondary" href="/object/detail/@build.Id.ToString()">Отмена</a>
+                </div>
+            </div>
+
+            <div class="col-md-6" style="height: 800px;">
+                <RadzenGoogleMap ApiKey="AIzaSyAQGepjcajymP5Wm0iY1cyJTJBVVx5_fZ8" Zoom="13" Center="@MarkerPosition" MapClick="@ClickPoint">
+                    <Markers>
+                        <RadzenGoogleMapMarker Title="@build.Name" Label="@build.Name" Position="@MarkerPosition" />
+                    </Markers>
+                </RadzenGoogleMap>
+            </div>
+        </div>
+    </EditForm>
+}
+
+
+@code {
+    [Parameter] public string RealtyObjectId { get; set; }
+
+    ObjectDTO build = null;
+    RadzenUpload upload;
+    Radzen.GoogleMapPosition MarkerPosition = new Radzen.GoogleMapPosition() { Lat = 43.236014, Lng = 76.935434 };
+    IEnumerable<DistrictDTO> districts;
+    IEnumerable<CurrencyDTO> currencies;
+    IEnumerable<AreaPropertyDTO> areaProperties;
+    AlertMessageType messageType = AlertMessageType.Error;
+    string message = String.Empty;
+    bool isBusy = false;
+
+    protected async override Task OnInitializedAsync()
+    {
+        build = await _objectService.GetForEdit(Convert.ToInt32(RealtyObjectId));
+        districts = await _districtService.GetAll();
+        currencies = await _currencyService.GetAll();
+        areaProperties = await _propertyService.GetAll();
+    }
+
+    private void SelectDate(DateTime? date, DateTimeType dateType)
+    {
+        switch (dateType)
+        {
+            case DateTimeType.Start:
+                build.StartDate = date.Value;
+                break;
+            case DateTimeType.Release:
+                build.ReleaseDate = date.Value;
+                break;
+        }
+    }
+
+    private void ClickPoint(Radzen.GoogleMapClickEventArgs point)
+    {
+        build.Lat = point.Position.Lat;
+        build.Lng = point.Position.Lng;
+        MarkerPosition = new Radzen.GoogleMapPosition() { Lat = build.Lat, Lng = build.Lng };
+    }
+
+    private async Task SaveChanges()
+    {
+        var response = await _objectService.PutAsync(build);
+        if (response == ResponseResultEnum.Updated)
+        {
+            _nav.NavigateTo($"/object/detail/{build.Id}");
+        }
+        else
+        {
+            message = "Ошибка при сохранении";
+            messageType = AlertMessageType.Error;
+        }
+    }
+}

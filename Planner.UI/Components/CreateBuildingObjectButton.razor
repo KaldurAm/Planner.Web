@@ -1,0 +1,15 @@
+﻿@inject NavigationManager _nav
+
+<AuthorizeView Roles="SuperAdmin, Admin, Chief">
+    <Authorized>
+        <RadzenButton Click="@GoToCreate" Text="Создать" Style="margin-bottom: 20px; width: 150px" />
+    </Authorized>
+</AuthorizeView>
+
+
+@code {
+    private void GoToCreate()
+    {
+        _nav.NavigateTo("/object/create");
+    }
+}
